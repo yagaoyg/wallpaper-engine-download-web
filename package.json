@@ -1,0 +1,12 @@
+{
+  "name": "steam-wallpaper-browser",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Steam 创意工坊壁纸浏览器 — 零依赖，仅需 Node.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
