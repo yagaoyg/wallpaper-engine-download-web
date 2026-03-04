@@ -373,9 +373,11 @@ if(API_PARAM) localStorage.setItem('wallhub_api_base', API_BASE);
 const S = {
   page:1, totalPages:1, totalItems:0,
   loading:false, view:'grid',
+  loadToken:0, modalId:'',
   items:[],
   f:{ search:'', sort:'trend', days:'30', type:'', rating:'', genres:[] }
 };
+const DETAIL_CACHE = new Map();
 
 function apiUrl(path){
   if(!path) return API_BASE || '';
@@ -563,6 +565,8 @@ function buildParams(){
 ================================================================ */
 async function load(){
   if(S.loading) return;
+  const loadToken = Date.now();
+  S.loadToken = loadToken;
   S.loading=true;
   showLoading();
   try {
@@ -603,6 +607,9 @@ async function load(){
       document.getElementById('resCnt').textContent = `约 ${dispTotal} 个 · 共 ${S.totalPages} 页`;
       renderItems(S.items);
       renderPagination();
+      if(!inBackendMode()){
+        enrichItemsViaProxy(S.items, loadToken).catch(()=>{});
+      }
     }
   } catch(err){
     console.error(err);
@@ -765,6 +772,7 @@ function goPage(p){ if(p<1||p>S.totalPages||p===S.page) return; S.page=p; window
 function openModal(id){
   const item = S.items.find(w=>w.publishedfileid===id);
   if(!item) return;
+  S.modalId = id;
 
   const thumb = item.preview_url||'';
   document.getElementById('mTitle').textContent = item.title||'未命名壁纸';
@@ -794,7 +802,25 @@ function openModal(id){
 
   document.getElementById('mOv').classList.add('open');
   document.body.style.overflow='hidden';
-  if(!inBackendMode()){ renderCmts([]); return; }
+  if(!inBackendMode()){
+    fetchProxyDetail(id).then(d=>{
+      if(S.modalId !== id) return;
+      if(d.preview_url) document.getElementById('mImg').src=d.preview_url;
+      if(d.description) document.getElementById('mDesc').textContent=d.description;
+      if(d.author) document.getElementById('mSub').innerHTML=`<span>🆔 ${id}</span><span>作者: ${esc(d.author)}</span>`;
+      if(d.tags && d.tags.length) document.getElementById('mTags').innerHTML=d.tags.map(t=>`<span class="tag-chip">${esc(t)}</span>`).join('');
+      renderStats({
+        subs:  fmtN(d.subscriptions || item.subscriptions || 0),
+        favs:  fmtN(d.favorited || item.favorited || 0),
+        views: fmtN(d.views || item.views || 0),
+        size:  d.file_size || '未知',
+        upd:   d.time_updated || '未知',
+        id,
+      });
+      renderCmts(d.comments||[]);
+    }).catch(()=>renderCmts([]));
+    return;
+  }
 
   // Fetch details
   fetch(apiUrl(`/api/steam/details?id=${id}`))
@@ -846,6 +872,7 @@ function renderCmts(list){
 function closeModal(){
   document.getElementById('mOv').classList.remove('open');
   document.body.style.overflow='';
+  S.modalId = '';
 }
 function mOvClick(e){ if(e.target===document.getElementById('mOv')) closeModal(); }
 
@@ -854,11 +881,7 @@ function mOvClick(e){ if(e.target===document.getElementById('mOv')) closeModal()
 ================================================================ */
 function dlWall(fid, title){
   if(!inBackendMode()){
-    const page = `https://steamcommunity.com/sharedfiles/filedetails/?id=${fid}`;
-    const steamUri = `steam://openurl/${page}`;
-    window.open(steamUri, '_blank');
-    setTimeout(()=>window.open(page, '_blank'), 120);
-    toast(`已跳转订阅页面：${title||fid}`, 'ok');
+    toast('未配置下载后端，请在地址后追加 ?api=https://你的后端域名', 'warn');
     return;
   }
   const btn=document.getElementById(`sub-${fid}`);
@@ -939,6 +962,79 @@ function getType(item){
   if(ts.includes('application')) return 'App';
   if(ts.includes('web'))         return 'Web';
   return 'Scene';
+}
+function parseSteamNumber(v){
+  return parseInt(String(v||'').replace(/[^\d]/g,'')) || 0;
+}
+function parseSteamDetailMarkdown(md, id){
+  const type = (md.match(/Type:\[([^\]]+)\]/i)||[])[1] || '';
+  const rating = (md.match(/Age Rating:\[([^\]]+)\]/i)||[])[1] || '';
+  const genre = (md.match(/Genre:\[([^\]]+)\]/i)||[])[1] || '';
+  const views = parseSteamNumber((md.match(/([\d,]+)\s+Unique Visitors/i)||[])[1]);
+  const subs = parseSteamNumber((md.match(/([\d,]+)\s+Current Subscribers/i)||[])[1]);
+  const favs = parseSteamNumber((md.match(/([\d,]+)\s+Current Favorites/i)||[])[1]);
+  const size = ((md.match(/File Size[\s\S]{0,220}?(\d[\d.,]*\s*(?:TB|GB|MB|KB|B))/i)||[])[1] || '').trim();
+  const updated = ((md.match(/File Size[\s\S]{0,260}?\n\s*\d[\d.,]*\s*(?:TB|GB|MB|KB|B)\s*\n+\s*([^\n]+?@[^\n]+|[A-Za-z]{3}\s+\d{1,2}[^\n]*)/i)||[])[1] || '').trim();
+  const author = ((md.match(/Created by[\s\S]{0,300}\n\s*([^\n]+)\n\s*(?:Offline|Online)\b/i)||[])[1] || '').trim();
+  const desc = ((md.match(/Description\s*\n+([\s\S]*?)(?:\n+\d+\s+Comments|\n+\[\<\]|\n+Edit links)/i)||[])[1] || '').trim();
+  const comments = [];
+  const cRe = /\[([^\]]+)\]\(https?:\/\/steamcommunity\.com\/(?:profiles|id)\/[^)]+\)\s+([^\n]+)\n\n([\s\S]*?)(?=\n\s*\[![^\n]+\]\(https?:\/\/avatars\.|\n+\[\<\]|\n+$)/g;
+  let m;
+  while((m = cRe.exec(md))){
+    const text = m[3].trim();
+    if(!text) continue;
+    comments.push({ author:m[1].trim(), date:m[2].trim(), text });
+    if(comments.length >= 30) break;
+  }
+  const tags = [type, rating, genre].filter(Boolean);
+  return {
+    publishedfileid:id,
+    tags,
+    type,
+    subscriptions:subs,
+    favorited:favs,
+    views,
+    file_size:size,
+    time_updated:updated,
+    author,
+    description:desc,
+    comments,
+  };
+}
+async function fetchProxyDetail(id){
+  if(DETAIL_CACHE.has(id)) return DETAIL_CACHE.get(id);
+  const page = `https://steamcommunity.com/sharedfiles/filedetails/?id=${id}`;
+  const res = await fetch(proxyUrl(page), { cache:'no-store' });
+  if(!res.ok) throw new Error(`detail ${res.status}`);
+  const md = await res.text();
+  const d = parseSteamDetailMarkdown(md, id);
+  DETAIL_CACHE.set(id, d);
+  return d;
+}
+async function enrichItemsViaProxy(items, token){
+  const queue = (items||[]).map(it=>String(it.publishedfileid||'')).filter(Boolean);
+  const conc = 6;
+  let idx = 0;
+  async function worker(){
+    while(idx < queue.length){
+      const id = queue[idx++];
+      try{
+        const d = await fetchProxyDetail(id);
+        const it = S.items.find(x=>String(x.publishedfileid)===id);
+        if(!it) continue;
+        if(d.subscriptions) it.subscriptions = d.subscriptions;
+        if(d.favorited) it.favorited = d.favorited;
+        if(d.views) it.views = d.views;
+        if(d.file_size) it.file_size = d.file_size;
+        if(d.time_updated) it.time_updated = d.time_updated;
+        if(d.tags && d.tags.length) it.tags = d.tags.map(t=>({tag:t}));
+      }catch{}
+    }
+  }
+  await Promise.all(Array.from({length:conc}, ()=>worker()));
+  if(token === S.loadToken){
+    renderItems(S.items);
+  }
 }
 function fmtN(n){ n=parseInt(n)||0; if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(1)+'K'; return n.toString(); }
 function fmtBytes(b){ b=parseInt(b)||0; if(!b) return '未知'; if(b>=1073741824) return (b/1073741824).toFixed(1)+' GB'; if(b>=1048576) return (b/1048576).toFixed(1)+' MB'; if(b>=1024) return (b/1024).toFixed(1)+' KB'; return b+' B'; }
