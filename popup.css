@@ -1,0 +1,30 @@
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI","Noto Sans SC",sans-serif;background:#0e1117;color:#e6edf3}
+.app{width:540px;min-height:640px;padding:14px}
+.head{margin-bottom:12px}
+.logo{font-size:20px;font-weight:700;color:#58a6ff}
+.logo span{margin-left:8px;color:#e6edf3;font-weight:500}
+.tips{font-size:12px;color:#8b949e;margin-top:2px}
+.toolbar{display:grid;grid-template-columns:1fr 120px 88px;gap:8px;margin-bottom:10px}
+input,select,button{height:36px;border-radius:8px;border:1px solid #30363d;background:#161b22;color:#e6edf3}
+input,select{padding:0 10px;outline:none}
+input:focus,select:focus{border-color:#58a6ff}
+button{cursor:pointer;background:#238636;border-color:#238636;font-weight:600}
+button:hover{background:#2ea043}
+.status{font-size:12px;color:#8b949e;margin-bottom:10px}
+.proxy-box{border:1px solid rgba(248,81,73,.35);background:#161b22;border-radius:10px;padding:10px;margin-bottom:12px}
+.proxy-title{font-size:13px;font-weight:700;color:#ffb3b3}
+.proxy-desc{font-size:12px;color:#c9d1d9;margin-top:6px;line-height:1.5}
+.proxy-domains{font-size:12px;color:#58a6ff;margin-top:8px;word-break:break-all}
+.copy-btn{margin-top:8px;height:30px;font-size:12px;background:#21262d;border-color:#30363d}
+.copy-btn:hover{background:#30363d}
+.list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;overflow:hidden}
+.thumb{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:#0d1117}
+.content{padding:8px}
+.title{font-size:12px;line-height:1.5;height:36px;overflow:hidden}
+.meta{font-size:11px;color:#8b949e;margin-top:4px}
+.actions{display:flex;gap:6px;margin-top:8px}
+.a{flex:1;text-align:center;text-decoration:none;font-size:11px;padding:6px 0;border-radius:6px;border:1px solid #30363d;color:#c9d1d9;background:#0d1117}
+.a:hover{border-color:#58a6ff;color:#58a6ff}
+.err{border-color:#f85149}
