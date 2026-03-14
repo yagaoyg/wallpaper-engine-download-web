@@ -1,5 +1,6 @@
 const APPID = 431960, PAGE_SIZE = 30;
 const PROXY_DOMAINS = ['steamcommunity.com', 'api.steampowered.com', 'steamusercontent.com'];
+const PREFS_KEY = 'wallhub-prefs-v1';
 
 const S = {
   page:1, totalPages:1, totalItems:0,
@@ -24,7 +25,7 @@ const I18N = {
     daysLabel: '时间排序',
     day1: '今天',
     day7: '一周',
-    day30: '30天',
+    day30: '一个月',
     day90: '三个月',
     day180: '半年',
     day365: '一年',
@@ -37,7 +38,7 @@ const I18N = {
     typeApp: '应用',
     ratingLabel: '年龄评级',
     ratingAll: '全部',
-    ratingEveryone: '全年龄',
+    ratingEveryone: '大众级',
     ratingQuestionable: '家长指导级',
     ratingMature: '限制成人级',
     filterBtn: '筛选',
@@ -131,8 +132,8 @@ const I18N = {
     typeApp: 'Application',
     ratingLabel: 'Content Rating',
     ratingAll: 'All',
-    ratingEveryone: 'Everyone',
-    ratingQuestionable: 'Questionable',
+    ratingEveryone: 'All ages',
+    ratingQuestionable: 'Parental guidance',
     ratingMature: 'Mature',
     filterBtn: 'Filter',
     sidebarTitle: 'Genre Filter',
@@ -216,10 +217,11 @@ const GENRES=[
 document.addEventListener('DOMContentLoaded', ()=>{
   setupLanguage();
   initTheme();
+  restorePrefs();
   renderGenreGrid();
   setupEvents();
-  syncDaysVisible();
-  document.getElementById('typeSel').value = S.f.type;
+  applyStateToControls();
+  syncFiltersFromControls();
   load();
 });
 
@@ -370,10 +372,24 @@ function setupEvents(){
   document.getElementById('searchBtn').addEventListener('click', doSearch);
   document.getElementById('usageBtn').addEventListener('click', openUsage);
   document.getElementById('themeBtn').addEventListener('click', toggleTheme);
-  document.getElementById('sortSel').addEventListener('change', e=>{ S.f.sort=e.target.value; S.page=1; syncDaysVisible(); load(); });
-  document.getElementById('daysSel').addEventListener('change', e=>{ S.f.days=e.target.value; S.page=1; load(); });
-  document.getElementById('typeSel').addEventListener('change', e=>{ S.f.type=e.target.value; S.page=1; load(); });
-  document.getElementById('ratingSel').addEventListener('change', e=>{ S.f.rating=e.target.value; S.page=1; load(); });
+  document.getElementById('sortSel').addEventListener('change', e=>{ S.f.sort=e.target.value; S.page=1; syncDaysVisible(); savePrefs(); load(); });
+  document.getElementById('daysSel').addEventListener('change', e=>{ S.f.days=e.target.value; S.page=1; savePrefs(); load(); });
+  document.getElementById('typeSel').addEventListener('change', e=>{ S.f.type=e.target.value; S.page=1; savePrefs(); load(); });
+  document.getElementById('ratingSel').addEventListener('change', e=>{ S.f.rating=e.target.value; S.page=1; savePrefs(); load(); });
+}
+function syncFiltersFromControls(){
+  const sortSel = document.getElementById('sortSel');
+  const daysSel = document.getElementById('daysSel');
+  const typeSel = document.getElementById('typeSel');
+  const ratingSel = document.getElementById('ratingSel');
+
+  if (sortSel) S.f.sort = sortSel.value || 'trend';
+  if (daysSel) S.f.days = daysSel.value || '7';
+  if (typeSel) S.f.type = typeSel.value || '';
+  if (ratingSel) S.f.rating = ratingSel.value || '';
+  S.f.genres = Array.from(activeGenres);
+  syncDaysVisible();
+  savePrefs();
 }
 
 function initTheme(){
@@ -406,6 +422,63 @@ function syncDaysVisible(){
   document.getElementById('daysGrp').style.display = S.f.sort==='trend' ? '' : 'none';
 }
 
+function restorePrefs(){
+  let raw = null;
+  try{
+    raw = localStorage.getItem(PREFS_KEY);
+  }catch{}
+  if(!raw) return;
+  try{
+    const saved = JSON.parse(raw);
+    if(saved && (saved.view === 'grid' || saved.view === 'list')) S.view = saved.view;
+    if(saved && saved.f){
+      const allowedSort = ['trend','mostrecent','lastupdated','totaluniquesubscribers'];
+      const allowedDays = ['1','7','30','90','180','365','0'];
+      const allowedType = ['', 'Scene', 'Video', 'Web', 'Application'];
+      const allowedRating = ['', 'Everyone', 'Questionable', 'Mature'];
+
+      if(allowedSort.includes(saved.f.sort)) S.f.sort = saved.f.sort;
+      if(allowedDays.includes(String(saved.f.days))) S.f.days = String(saved.f.days);
+      if(allowedType.includes(saved.f.type || '')) S.f.type = saved.f.type || '';
+      if(allowedRating.includes(saved.f.rating || '')) S.f.rating = saved.f.rating || '';
+
+      const savedGenres = Array.isArray(saved.f.genres) ? saved.f.genres : [];
+      const validGenres = savedGenres.filter(g=>GENRES.some(x=>x.id===g));
+      if(validGenres.length){
+        activeGenres = new Set(validGenres);
+      }
+    }
+  }catch{}
+  S.f.genres = Array.from(activeGenres);
+}
+function applyStateToControls(){
+  const sortSel = document.getElementById('sortSel');
+  const daysSel = document.getElementById('daysSel');
+  const typeSel = document.getElementById('typeSel');
+  const ratingSel = document.getElementById('ratingSel');
+  if(sortSel) sortSel.value = S.f.sort;
+  if(daysSel) daysSel.value = S.f.days;
+  if(typeSel) typeSel.value = S.f.type;
+  if(ratingSel) ratingSel.value = S.f.rating;
+  syncDaysVisible();
+  setView(S.view);
+}
+function savePrefs(){
+  const payload = {
+    view: S.view,
+    f: {
+      sort: S.f.sort,
+      days: S.f.days,
+      type: S.f.type,
+      rating: S.f.rating,
+      genres: Array.from(activeGenres),
+    },
+  };
+  try{
+    localStorage.setItem(PREFS_KEY, JSON.stringify(payload));
+  }catch{}
+}
+
 let activeGenres = new Set(GENRES.map(g=>g.id));
 
 function renderGenreGrid(){
@@ -421,6 +494,7 @@ function toggleGenre(id){
   if(activeGenres.has(id)) activeGenres.delete(id);
   else activeGenres.add(id);
   S.f.genres = Array.from(activeGenres);
+  savePrefs();
   renderGenreGrid();
 }
 
@@ -438,14 +512,16 @@ function toggleGenresAll(){
   if (activeGenres.size === GENRES.length) activeGenres = new Set();
   else activeGenres = new Set(GENRES.map(g=>g.id));
   S.f.genres = Array.from(activeGenres);
+  savePrefs();
   renderGenreGrid();
 }
-function applyFilters(){ closeSB(); S.page=1; load(); }
+function applyFilters(){ closeSB(); S.page=1; savePrefs(); load(); }
 
 function setView(v){
   S.view=v;
   document.getElementById('vgrid').classList.toggle('active',v==='grid');
   document.getElementById('vlist').classList.toggle('active',v==='list');
+  savePrefs();
   renderItems(S.items);
 }
 
@@ -476,6 +552,7 @@ function buildParams(){
 
 async function load(){
   if(S.loading) return;
+  syncFiltersFromControls();
   S.loading=true;
   showLoading();
   try {
