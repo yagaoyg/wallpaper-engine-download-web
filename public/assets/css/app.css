@@ -1831,23 +1831,66 @@ body.theme-light .theme-icon.moon {
   }
 }
 @media (max-width: 768px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  body {
+    padding-top: var(--mobile-header-offset, 116px); /* Increased offset for search bar */
+  }
+  .header,
+  .filter-bar,
+  .main,
+  .site-disclaimer,
+  .disclaimer-inner {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+  }
   .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 120;
     padding: 10px 12px;
-    gap: 8px;
+    gap: 12px 8px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 
+      "logo actions"
+      "search search";
+    align-items: center;
   }
   .logo {
+    grid-area: logo;
     font-size: 18px;
+    padding-right: 0;
+    height: auto;
+    display: flex;
+    align-items: center;
+    line-height: normal;
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .search-wrap {
+    grid-area: search;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-top: 2px;
+  }
   .filter-bar {
-    padding: 10px 16px;
+    padding: 10px 12px;
     gap: 10px;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
-    grid-template-areas: "sort days btn" "type rating btn";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: "sort days" "type rating" "btn btn";
     align-items: center;
   }
   #sortGrp {
@@ -1872,21 +1915,32 @@ body.theme-light .theme-icon.moon {
     display: none;
   }
   .fg {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     padding: 6px 7px;
+    min-width: 0;
   }
   .sel {
+    width: 100%;
+    min-width: 0;
+  }
+  #sortSel,
+  #daysSel,
+  #typeSel,
+  #ratingSel {
     width: 100%;
     min-width: 0;
   }
   .filter-btn {
     grid-area: btn;
     margin-left: 0;
-    justify-self: end;
+    justify-self: stretch;
+    justify-content: center;
     align-self: stretch;
     min-height: 42px;
   }
   .main {
-    padding: 14px;
+    padding: 14px 10px 16px;
   }
   .disclaimer-inner {
     padding: 3px 14px 8px;
@@ -1916,7 +1970,17 @@ body.theme-light .theme-icon.moon {
     padding: 10px 12px;
   }
   .header-actions {
-    gap: 8px;
+    grid-area: actions;
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-self: end;
+    margin-left: 0;
+  }
+  .actions-social,
+  .actions-divider {
+    display: flex;
   }
   .actions-main,
   .actions-social {
@@ -1978,28 +2042,21 @@ body.theme-light .theme-icon.moon {
 }
 @media (max-width: 480px) {
   .header {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "logo actions" "search search";
     padding: 10px;
-    gap: 8px;
+    gap: 12px 6px;
   }
   .header-actions {
-    justify-self: end;
     gap: 5px;
   }
   .logo {
-    font-size: 18px;
-    letter-spacing: 0.7px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 17px;
+    letter-spacing: 0.5px;
   }
   .logo span {
-    display: inline;
-    margin-left: 5px;
+    margin-left: 4px;
   }
   .filter-bar {
-    padding: 10px 12px;
+    padding: 10px;
     grid-template-columns: 1fr 1fr;
     grid-template-areas: "sort days" "type rating" "btn btn";
   }
@@ -2010,32 +2067,29 @@ body.theme-light .theme-icon.moon {
   }
   .actions-main,
   .actions-social {
-    gap: 5px;
+    gap: 4px;
   }
   .actions-divider {
     height: 16px;
+    margin: 0 1px;
   }
   .lang-btn {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     font-size: 11px;
     border-radius: 8px;
   }
   .head-icon-btn,
-  .head-theme-btn {
-    width: 30px;
-    height: 30px;
+  .head-theme-btn,
+  .head-help-btn {
+    width: 28px;
+    height: 28px;
     border-radius: 8px;
   }
   .head-icon-btn svg,
   .head-theme-btn svg {
-    width: 14px;
-    height: 14px;
-  }
-  .head-help-btn {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
+    width: 13px;
+    height: 13px;
   }
   .search-wrap {
     min-width: 0;
@@ -2052,6 +2106,9 @@ body.theme-light .theme-icon.moon {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
+  .main {
+    padding: 12px 8px 14px;
+  }
   .card-body {
     padding: 8px 10px 10px;
   }
@@ -2060,6 +2117,34 @@ body.theme-light .theme-icon.moon {
   }
   .mstats {
     grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 377px) {
+  .logo {
+    font-size: 14px;
+  }
+  .logo span {
+    margin-left: 2px;
+  }
+  .header-actions {
+    gap: 3px;
+  }
+  .actions-main,
+  .actions-social {
+    gap: 3px;
+  }
+  .lang-btn,
+  .head-icon-btn,
+  .head-theme-btn,
+  .head-help-btn {
+    width: 26px;
+    height: 26px;
+  }
+  .head-icon-btn svg,
+  .head-theme-btn svg,
+  .head-help-btn svg {
+    width: 12px;
+    height: 12px;
   }
 }
 @media (min-width: 1400px) {
@@ -2094,18 +2179,34 @@ body.theme-light .theme-icon.moon {
 }
 @media (max-width: 1180px) and (orientation: landscape) {
   .header {
-    height: 64px;
-    grid-template-columns: auto minmax(300px, 1fr) auto;
-    padding: 0 14px;
-    gap: 12px;
+    height: auto;
+    min-height: 58px;
+    padding: 10px 14px;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "logo actions" "search search";
+    align-items: center;
   }
   .logo {
     font-size: 19px;
+    grid-area: logo;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .search-wrap {
+    grid-area: search;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
   }
   .search-input {
     min-height: 40px;
   }
   .header-actions {
+    grid-area: actions;
+    justify-self: end;
     gap: 7px;
   }
   .filter-bar {

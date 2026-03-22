@@ -1051,6 +1051,9 @@ function extractSteamCmdFailure(steamcmdPath, appId, publishedFileId) {
     if (low.includes('result : timeout') || low.includes('timed out')) {
       return 'Steam 下载超时（Timeout）';
     }
+    if (low.includes('missing decryption key')) {
+      return 'Steam 返回 Missing decryption key（该壁纸受Steam官方DRM版权保护。解决办法：请确保你后台运行了Steam客户端，并且登录了拥有《壁纸引擎》的账号。SteamCMD会自动借用你本地的登录状态来绕过此限制）';
+    }
     if (low.includes('failed to initialize depot') || low.includes('failed to init depot') || low.includes('depot') && low.includes('manifest')) {
       return 'Steam Depot 初始化失败（多为代理链路不稳定或节点不支持）';
     }
@@ -1176,9 +1179,7 @@ async function downloadViaSteamCmd(publishedFileId, appId, title, options) {
   }
   if (!fs.existsSync(itemDir)) throw new Error(lastErr || 'SteamCMD 执行完成但未产出工坊文件目录');
   if (!fs.readdirSync(itemDir).length) {
-    throw new Error(user && pass
-      ? `SteamCMD 未下载到文件（${lastErr}）`
-      : `匿名下载失败（${lastErr}），请设置 STEAM_USERNAME/STEAM_PASSWORD 继续`);
+    throw new Error(`匿名下载失败（${lastErr}）`);
   }
   const wantVideoOnly = !!(options && options.videoOnly);
   if (wantVideoOnly) {

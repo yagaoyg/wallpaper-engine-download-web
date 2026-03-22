@@ -222,8 +222,26 @@ document.addEventListener('DOMContentLoaded', ()=>{
   setupEvents();
   applyStateToControls();
   syncFiltersFromControls();
+  syncMobileHeaderOffset();
+  if (window.ResizeObserver) {
+    const h = document.querySelector('.header');
+    if (h) new ResizeObserver(syncMobileHeaderOffset).observe(h);
+  }
+  window.addEventListener('resize', syncMobileHeaderOffset, { passive: true });
+  window.addEventListener('orientationchange', syncMobileHeaderOffset, { passive: true });
   load();
 });
+function syncMobileHeaderOffset(){
+  const h = document.querySelector('.header');
+  if (!h) return;
+  const w = window.innerWidth || document.documentElement.clientWidth || 0;
+  if (w > 768) {
+    document.documentElement.style.removeProperty('--mobile-header-offset');
+    return;
+  }
+  const px = Math.ceil(h.getBoundingClientRect().height);
+  document.documentElement.style.setProperty('--mobile-header-offset', `${px}px`);
+}
 
 function t(k, vars){
   let s = (I18N[currentLang] && I18N[currentLang][k]) || I18N.zh[k] || k;
@@ -365,6 +383,7 @@ function applyLanguage(){
   const siteDisclaimerText = document.getElementById('siteDisclaimerText');
   if (siteDisclaimerText) siteDisclaimerText.textContent = t('disclaimerText');
   applyTheme(document.body.classList.contains('theme-light') ? 'light' : 'dark');
+  syncMobileHeaderOffset();
 }
 
 function setupEvents(){
