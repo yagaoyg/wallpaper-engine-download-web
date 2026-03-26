@@ -17,6 +17,7 @@
 /steamcmd/*.zip
 
 node_modules/
+node_cache/
 dist/
 build/
 coverage/
